@@ -72,4 +72,32 @@ fetch(`${GAS_URL}?action=certificates`)
       certBox.appendChild(div);
     });
   });
+const articleList = document.getElementById("articleList");
+const modal = document.getElementById("articleModal");
+
+fetch(`${GAS_URL}?action=articles`)
+  .then(r => r.json())
+  .then(j => {
+    j.data.forEach(a => {
+      const div = document.createElement("div");
+      div.className = "article-item";
+      div.innerText = a.title;
+      div.onclick = () => openArticle(a.id);
+      articleList.appendChild(div);
+    });
+  });
+
+function openArticle(id) {
+  fetch(`${GAS_URL}?action=article&id=${id}`)
+    .then(r => r.json())
+    .then(a => {
+      document.getElementById("articleTitle").innerText = a.title;
+      document.getElementById("articleBody").innerHTML = a.content;
+      modal.classList.remove("hidden");
+    });
+}
+
+function closeArticle() {
+  modal.classList.add("hidden");
+}
 
