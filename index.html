@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>বাংলাদেশ পাবলিক আপডেট হাব</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f6f7f8;
+      color: #111;
+    }
+.loader {
+  text-align: center;
+  padding: 20px;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+
+    /* Top Bar */
+    .topbar {
+      position: sticky;
+      top: 0;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 14px 16px;
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #006a4e;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    .categories {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      overflow-x: auto;
+    }
+
+    .categories span {
+      padding: 6px 14px;
+      font-size: 0.85rem;
+      background: #eef1f3;
+      border-radius: 20px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    /* Feed */
+    .feed {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 10px 14px;
+    }
+
+    .news-item {
+      padding: 14px 4px;
+      border-bottom: 1px solid #e3e3e3;
+      cursor: pointer;
+    }
+
+    .news-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.45;
+      margin-bottom: 6px;
+    }
+
+    .meta {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .summary {
+      font-size: 0.95rem;
+      color: #333;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .news-item:hover .summary {
+      display: block;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 30px 10px;
+      font-size: 0.9rem;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Top -->
+  <div class="topbar">
+    <div class="logo">বাংলাদেশ পাবলিক আপডেট হাব</div>
+    <div class="subtitle">
+      সরকারি চাকরি, শিক্ষা ও গুরুত্বপূর্ণ নোটিশ — অফিসিয়াল সোর্স থেকে
+    </div>
+
+    <div class="categories">
+  <span data-category="">🔥 হট</span>
+  <span data-category="jobs">চাকরি</span>
+  <span data-category="education">শিক্ষা</span>
+  <span data-category="tech">টেক</span>
+</div>
+  </div>
+
+  <!-- Feed -->
+  <div class="feed" id="feed"></div>
+
+  <!-- Footer -->
+  <footer>
+    © ২০২৪ বাংলাদেশ পাবলিক আপডেট হাব <br />
+    সমস্ত তথ্য সংশ্লিষ্ট অফিসিয়াল সোর্স থেকে সংগৃহীত
+  </footer>
+const seenUrls = new Set();
+  <!-- JS -->
+
+
+<script>
+  const feed = document.getElementById("feed");
+  const categoryButtons = document.querySelectorAll(".categories span");
+
+  const seenUrls = new Set(); // ✅ MUST be inside JS
+
+  let currentCategory = "";
+  let page = 1;
+  const limit = 10;
+  let loading = false;
+  let reachedEnd = false;
+
+  function loadNews(reset = false) {
+    if (loading || reachedEnd) return;
+    loading = true;
+
+    if (reset) {
+      feed.innerHTML = "";
+      page = 1;
+      reachedEnd = false;
+      seenUrls.clear(); // reset duplicate memory
+    }
+
+    let url = `http://127.0.0.1:5000/news?page=${page}&limit=${limit}`;
+    if (currentCategory) {
+      url += `&category=${currentCategory}`;
+    }
+
+    const loader = document.createElement("div");
+    loader.className = "loader";
+    loader.innerText = "লোড হচ্ছে...";
+    feed.appendChild(loader);
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => {
+        loader.remove();
+        loading = false;
+
+        if (!data.articles || data.articles.length === 0) {
+          reachedEnd = true;
+          return;
+        }
+
+        data.articles.forEach(item => {
+          if (seenUrls.has(item.url)) return;
+
+          seenUrls.add(item.url);
+
+          const div = document.createElement("div");
+          div.className = "news-item";
+          div.innerHTML = `
+            <div class="news-title">${item.title}</div>
+            <div class="meta">${item.source || "Unknown"} • ${item.category}</div>
+          `;
+          div.onclick = () => window.open(item.url, "_blank");
+          feed.appendChild(div);
+        });
+
+        page++;
+      })
+      .catch(err => {
+        loader.remove();
+        loading = false;
+        console.error("Fetch error:", err);
+      });
+  }
+
+  // Initial load
+  loadNews(true);
+
+  // Category click
+  categoryButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentCategory = btn.getAttribute("data-category") || "";
+      loadNews(true);
+    });
+  });
+
+  // Infinite scroll
+  window.addEventListener("scroll", () => {
+    if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+      loadNews();
+    }
+  });
+
+  // Auto refresh
+  const REFRESH_INTERVAL = 5 * 60 * 1000;
+
+  setInterval(() => {
+    console.log("Checking for new updates...");
+    loadNews(true);
+  }, REFRESH_INTERVAL);
+</script>
+
+
+
+</body>
+</html>
